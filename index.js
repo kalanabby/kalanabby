@@ -1,34 +1,32 @@
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
-const fs = require('fs');
-const ytdl = require('ytdl-core');
-const { Boom } = require('@hapi/boom');
+const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys");
+const pino = require("pino");
 
 async function startBot() {
-  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
-  const { version, isLatest } = await fetchLatestBaileysVersion();
+  // Step 1: Set up authentication state
+  const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
 
+  // Step 2: Create the socket
   const sock = makeWASocket({
-    version,
     auth: state,
-    printQRInTerminal: true
+    printQRInTerminal: true,
+    logger: pino({ level: "silent" }),
   });
 
-  sock.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message || msg.key.fromMe) return;
+  // Step 3: Save updated credentials
+  sock.ev.on("creds.update", saveCreds);
 
-    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+  // Step 4: Wait for connection open
+  sock.ev.on("connection.update", (update) => {
+    const { connection, lastDisconnect } = update;
 
-    if (text?.startsWith("!song ")) {
-      const query = text.slice(6).trim();
-      
-      await sock.sendMessage(msg.key.remoteJid, { text: `🔍 Searching song for: *${query}*\n(Feature under development...)` });
-
-      // You will add song search and download here later
+    if (connection === "open") {
+      console.log("✅ Bot connected successfully!");
+      console.log("📱 Your Session ID (JID):", sock.user.id); // This is your sessionId
+    } else if (connection === "close") {
+      console.log("❌ Connection closed. Trying to reconnect...");
+      startBot(); // Restart on disconnect
     }
   });
-
-  sock.ev.on('creds.update', saveCreds);
 }
 
 startBot();
