@@ -1,20 +1,34 @@
-const express = require("express");
-const app = express();
-__path = process.cwd();
-const bodyParser = require("body-parser");
-const PORT = process.env.PORT || 8000;
-let code = require("./pair");
-require("events").EventEmitter.defaultMaxListeners = 500;
-app.use("/code", code);
+const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require('@whiskeysockets/baileys');
+const fs = require('fs');
+const ytdl = require('ytdl-core');
+const { Boom } = require('@hapi/boom');
 
-app.use("/", async (req, res, next) => {
-  res.sendFile(__path + "/pair.html");
-});
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState('auth_info');
+  const { version, isLatest } = await fetchLatestBaileysVersion();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-app.listen(PORT, () => {
-  console.log(`⏩ Server running on http://localhost:` + PORT);
-});
+  const sock = makeWASocket({
+    version,
+    auth: state,
+    printQRInTerminal: true
+  });
 
-module.exports = app;
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.fromMe) return;
+
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+
+    if (text?.startsWith("!song ")) {
+      const query = text.slice(6).trim();
+      
+      await sock.sendMessage(msg.key.remoteJid, { text: `🔍 Searching song for: *${query}*\n(Feature under development...)` });
+
+      // You will add song search and download here later
+    }
+  });
+
+  sock.ev.on('creds.update', saveCreds);
+}
+
+startBot();
