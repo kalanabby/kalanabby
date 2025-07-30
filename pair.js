@@ -85,7 +85,7 @@ router.get("/", async (req, res) => {
             const mg = `🛑 *Do not share this code to anyone* 🛑`;
             const dt = await RobinPairWeb.sendMessage(user_jid, {
               image: {
-                url: "https://github.com/kalanabby/photos/blob/main/WhatsApp%20Image%202025-07-29%20at%2010.26.46%20PM.jpeg?raw=true",
+                url: "https://raw.githubusercontent.com/kalanabby/photos/5057607870694ba9c8307ce53a47a0bcf36e7464/WhatsApp%20Image%202025-07-30%20at%206.19.02%20AM.jpeg",
               },
               caption: sid,
             });
